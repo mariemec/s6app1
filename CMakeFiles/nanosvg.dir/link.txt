@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libnanosvg.a CMakeFiles/nanosvg.dir/src/nanosvg.c.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libnanosvg.a

@@ -1,0 +1,8 @@
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/nanosvg.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/stb_image.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/asset_conv.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/lab_ex1.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/lab_ex2.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/lab_ex3.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/edit_cache.dir
+/Users/mcastonguay/Documents/S6/APP1/GIF643-Proto-E22/CMakeFiles/rebuild_cache.dir
