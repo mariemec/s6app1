@@ -107,16 +107,16 @@ public:
 };
 
 Matrix3D cut_out_cube(Matrix4D matrix, Delimiter4D delimiters){
-    Matrix3D cube = Matrix3D(delimiters.z_delimiter.span,Matrix2D(delimiters.y_delimiter.span,Vector1D(delimiters.x_delimiter.span)));
+    Matrix3D cube = Matrix3D(delimiters.x_delimiter.span,Matrix2D(delimiters.y_delimiter.span,Vector1D(delimiters.z_delimiter.span)));
     int i = 0;
     int j = 0;
     int k = 0;
     std::cout<<delimiters.toString()<<std::endl;
 
-    for (int z=delimiters.z_delimiter.begin ; z<delimiters.z_delimiter.end;z++){
+    for (int x=delimiters.x_delimiter.begin ; x<delimiters.x_delimiter.end;x++){
         for (int y=delimiters.y_delimiter.begin ; y<delimiters.y_delimiter.end;y++){
-            for (int x=delimiters.x_delimiter.begin ; x<delimiters.x_delimiter.end;x++){
-                cube.at(k).at(j).at(i) = matrix.at(z).at(y).at(x).at(delimiters.field_component);
+            for (int z=delimiters.z_delimiter.begin ; z<delimiters.z_delimiter.end;z++){
+                cube.at(k).at(j).at(i) = matrix.at(x).at(y).at(z).at(delimiters.field_component);
                 i++;
             }
             i=0;
@@ -184,11 +184,11 @@ void add_to_4dMatrix(Matrix4D* matrix, Matrix3D sourceCube, Shape shape, Delimit
     int i=0;
     int j=0;
     int k=0;
-    
-    for (int z=destDelimiters.z_delimiter.begin ; z<destDelimiters.z_delimiter.end;z++){
+            
+    for (int x=destDelimiters.x_delimiter.begin ; x<destDelimiters.x_delimiter.end;x++){
         for (int y=destDelimiters.y_delimiter.begin ; y<destDelimiters.y_delimiter.end;y++){
-            for (int x=destDelimiters.x_delimiter.begin ; x<destDelimiters.x_delimiter.end;x++){
-                matrix->at(z).at(y).at(x).at(destDelimiters.field_component) += sourceCube[k][j][i];
+            for (int z=destDelimiters.z_delimiter.begin ; z<destDelimiters.z_delimiter.end;z++){
+                matrix->at(x).at(y).at(z).at(destDelimiters.field_component) += sourceCube[k][j][i];
                 i++;
             }
             i=0;
@@ -205,10 +205,10 @@ void subtract_from_4dMatrix(Matrix4D* matrix, Matrix3D sourceCube, Shape shape, 
     int j=0;
     int k=0;
 
-    for (int z=destDelimiters.z_delimiter.begin ; z<destDelimiters.z_delimiter.end;z++){
+    for (int x=destDelimiters.x_delimiter.begin ; x<destDelimiters.x_delimiter.end;x++){
         for (int y=destDelimiters.y_delimiter.begin ; y<destDelimiters.y_delimiter.end;y++){
-            for (int x=destDelimiters.x_delimiter.begin ; x<destDelimiters.x_delimiter.end;x++){
-                matrix->at(z).at(y).at(x).at(destDelimiters.field_component) -= sourceCube[k][j][i];
+            for (int z=destDelimiters.z_delimiter.begin ; z<destDelimiters.z_delimiter.end;z++){
+                matrix->at(x).at(y).at(z).at(destDelimiters.field_component) -= sourceCube[k][j][i];
                 i++;
             }
             i=0;
@@ -263,7 +263,9 @@ public:
         }
         // couche 0
         subtract3D(&cubes.at(0), &cubes.at(1));
+        printCube(cubes.at(0));
         add_to_4dMatrix(&curl_E, cubes.at(0), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y-1), Delimiter(0, shape.z), 0));
+        print4D(curl_E);
         
         subtract3D(&cubes.at(2), &cubes.at(3));
         subtract_from_4dMatrix(&curl_E, cubes.at(2), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z-1), 0));
@@ -619,7 +621,7 @@ public:
 //     print4D(e.data);
 // }
 
-// Test curl_H
+// Test curl_E
 int main(int argc, char** argv)
 {
     Shape s = {

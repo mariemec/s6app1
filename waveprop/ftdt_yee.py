@@ -4,6 +4,8 @@ import numpy, fiddle
 
 def curl_E(E):
     curl_E = numpy.zeros(E.shape)
+    compo1 = E[:, :, 1:, 1]
+    compo2 = E[:, :, 1:, 1]
     curl_E[:, :-1, :, 0] += E[:, 1:, :, 2] - E[:, :-1, :, 2]
     curl_E[:, :, :-1, 0] -= E[:, :, 1:, 1] - E[:, :, :-1, 1]
 
