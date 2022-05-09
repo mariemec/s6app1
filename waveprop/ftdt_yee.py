@@ -4,8 +4,6 @@ import numpy, fiddle
 
 def curl_E(E):
     curl_E = numpy.zeros(E.shape)
-    compo1 = E[:, :, 1:, 1]
-    compo2 = E[:, :, 1:, 1]
     curl_E[:, :-1, :, 0] += E[:, 1:, :, 2] - E[:, :-1, :, 2]
     curl_E[:, :, :-1, 0] -= E[:, :, 1:, 1] - E[:, :, :-1, 1]
 
@@ -60,55 +58,70 @@ class WaveEquation:
             field = field[:, :, slice_index, field_component]
         source_val, source_pos = source(self.index)
         self.E, self.H = timestep(self.E, self.H, self.courant_number, source_val, source_pos)
-
-        if initial:
-            axes = figure.add_subplot(111)
-            self.image = axes.imshow(field, vmin=-1e-2, vmax=1e-2)
-        else:
-            self.image.set_data(field)
+        # print(H)
+        # if initial:
+        #     axes = figure.add_subplot(111)
+        #     self.image = axes.imshow(field, vmin=-1e-2, vmax=1e-2)
+        # else:
+        #     self.image.set_data(field)
         self.index += 1
 
-
-# if __name__ == "__main__":
-#     n = 100
-#     r = 0.01
-#     l = 30
-
-
-#     def source(index):
-#         return ([n // 3], [n // 3], [n // 2],[0]), 0.1*numpy.sin(0.1 * index)
+def print_to_file(matrix, field_component, slice, slice_index, ech):
+    with open(f"{field_component}_{slice}_{slice_index}_{ech}_python.txt", 'w') as f:
+        for cube in matrix :
+            for a in cube:
+                for b in a:
+                    for val in b:
+                        print("%.5f" % val, file=f)
 
 
-#     w = WaveEquation((n, n, n), 0.1, source)
-#     fiddle.fiddle(w, [('field component',{'Ex':0,'Ey':1,'Ez':2, 'Hx':3,'Hy':4,'Hz':5}),('slice',{'XY':2,'YZ':0,'XZ':1}),('slice index',0,n-1,n//2,1)], update_interval=0.01)
+
 
 if __name__ == "__main__":
-    data = numpy.zeros((2, 2, 2, 3))
-    data[0][0][0][0] = 1.0
-    data[0][1][0][0] = 2.0
-    data[1][0][0][0] = 3.0
-    data[1][1][0][0] = 4.0
-    data[0][0][1][0] = 5.0
-    data[0][1][1][0] = 6.0
-    data[1][0][1][0] = 7.0
-    data[1][1][1][0] = 8.0
-    data[0][0][0][1] = 9.0
-    data[0][1][0][1] = 10.0
-    data[1][0][0][1] = 11.0
-    data[1][1][0][1] = 12.0
-    data[0][0][1][1] = 13.0
-    data[0][1][1][1] = 14.0
-    data[1][0][1][1] = 15.0
-    data[1][1][1][1] = 16.0
-    data[0][0][0][2] = 17.0
-    data[0][1][0][2] = 18.0
-    data[1][0][0][2] = 19.0
-    data[1][1][0][2] = 20.0
-    data[0][0][1][2] = 21.0
-    data[0][1][1][2] = 22.0
-    data[1][0][1][2] = 23.0
-    data[1][1][1][2] = 24.0
-    # print(data)
-    c_E = curl_E(data)
-    
-    print(c_E)
+    n = 100
+
+    r = 0.01
+    l = 30
+
+
+    def source(index):
+        return ([n // 3], [n // 3], [n // 2],[0]), 0.1*numpy.sin(0.1 * index)
+
+
+    w = WaveEquation((n, n, n), 0.1, source)
+
+    for i in range(10):
+        w(-1, 0, 1, 50, i)
+        print_to_file(w.E, 0, 1, 50, i)
+    # fiddle.fiddle(w, [('field component',{'Ex':0,'Ey':1,'Ez':2, 'Hx':3,'Hy':4,'Hz':5}),('slice',{'XY':2,'YZ':0,'XZ':1}),('slice index',0,n-1,n//2,1)], update_interval=0.01)
+
+# if __name__ == "__main__":
+#     data = numpy.zeros((2, 2, 2, 3))
+#     data[0][0][0][0] = 1.0
+#     data[0][1][0][0] = 2.0
+#     data[1][0][0][0] = 3.0
+#     data[1][1][0][0] = 4.0
+#     data[0][0][1][0] = 5.0
+#     data[0][1][1][0] = 6.0
+#     data[1][0][1][0] = 7.0
+#     data[1][1][1][0] = 8.0
+#     data[0][0][0][1] = 9.0
+#     data[0][1][0][1] = 10.0
+#     data[1][0][0][1] = 11.0
+#     data[1][1][0][1] = 12.0
+#     data[0][0][1][1] = 13.0
+#     data[0][1][1][1] = 14.0
+#     data[1][0][1][1] = 15.0
+#     data[1][1][1][1] = 16.0
+#     data[0][0][0][2] = 17.0
+#     data[0][1][0][2] = 18.0
+#     data[1][0][0][2] = 19.0
+#     data[1][1][0][2] = 20.0
+#     data[0][0][1][2] = 21.0
+#     data[0][1][1][2] = 22.0
+#     data[1][0][1][2] = 23.0
+#     data[1][1][1][2] = 24.0
+#     # print(data)
+#     c_E = curl_H(data)
+#
+#     print(c_E)

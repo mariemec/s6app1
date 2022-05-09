@@ -15,6 +15,7 @@ add_executable(asset_conv src/asset_conv.cpp)
 target_link_libraries(asset_conv nanosvg stb_image pthread)
 
 add_executable(ftdt_yee waveprop/ftdt_yee.cpp)
+target_link_libraries(ftdt_yee pthread)
 
 # Lab
 add_executable(lab_ex1 src/lab_ex1.cpp)

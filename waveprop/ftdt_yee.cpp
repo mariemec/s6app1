@@ -1,11 +1,15 @@
 #include <iostream>
 #include <ostream>
+#include <fstream>
 #include <cmath>
 #include <vector>
 #include <string>
+#include <thread>
+#include <future>
+#include <chrono>
 
 // 4D vector type definition
-typedef std::vector<int> Vector1D;
+typedef std::vector<float> Vector1D;
 typedef std::vector<Vector1D> Matrix2D;
 typedef std::vector<Matrix2D> Matrix3D;
 typedef std::vector<Matrix3D> Matrix4D;
@@ -27,11 +31,11 @@ void printCube(Matrix3D cube){
 void print4D(Matrix4D matrix){
     std::cout << "4d matrix:" << std::endl;
     bool onlyZeroes = true;
-    for(auto cube: matrix){
-        for(auto slice: cube){
-            for(auto row: slice){
-                for(auto val: row){
-                    if (val != 0.0){
+    for(Matrix3D cube: matrix){
+        for(Matrix2D slice: cube){
+            for(Vector1D row: slice){
+                for(float val: row){
+                    if (val != 0){
                         onlyZeroes = false;
                     }
                 }
@@ -39,11 +43,11 @@ void print4D(Matrix4D matrix){
         }
     }
     if (!onlyZeroes){
-        for(auto cube: matrix){
-            for(auto slice: cube){
-                for(auto row: slice){
-                    for(auto val: row){
-                        std::cout << val << " ";
+        for(Matrix3D cube: matrix){
+            for(Matrix2D slice: cube){
+                for(Vector1D row: slice){
+                    for(float val: row){
+                        printf("%0.5f ", val);
                     }
                     std::cout<<std::endl;
                 }
@@ -55,6 +59,26 @@ void print4D(Matrix4D matrix){
     }else{
         std::cout<<"matrix is filled with zeroes :("<<std::endl;
     }
+}
+
+void print_to_file(Matrix4D m, int field_component, int slice, int slice_index, int ech){
+    
+    std::string filename =  std::to_string(field_component) + "_" + std::to_string(slice) + "_" +std::to_string(slice_index)+ "_" +std::to_string(ech)+"_cpp.txt";  
+    std::ofstream myfile (filename);
+    if (myfile.is_open())
+    {
+        for(Matrix3D cube: m){
+            for(Matrix2D slice: cube){
+                for(Vector1D row: slice){
+                    for(float val: row){
+                        myfile << std::fixed << std::setprecision(5) << val << std::endl;
+                    }
+                }
+            }
+        }
+        myfile.close();
+    }
+    else std::cout << "Unable to open file";
 }
 
 // Used to specify the size of Matrix4D
@@ -111,7 +135,7 @@ Matrix3D cut_out_cube(Matrix4D matrix, Delimiter4D delimiters){
     int i = 0;
     int j = 0;
     int k = 0;
-    std::cout<<delimiters.toString()<<std::endl;
+    // std::cout<<delimiters.toString()<<std::endl;
 
     for (int x=delimiters.x_delimiter.begin ; x<delimiters.x_delimiter.end;x++){
         for (int y=delimiters.y_delimiter.begin ; y<delimiters.y_delimiter.end;y++){
@@ -229,6 +253,16 @@ public:
     virtual Matrix4D curl() = 0;
 };
 
+Matrix3D build_term(Matrix4D matrix, Delimiter4D d1, Delimiter4D d2){
+    std::future<Matrix3D> cube1_future = std::async(cut_out_cube, matrix, d1);
+    std::future<Matrix3D> cube2_future = std::async(cut_out_cube, matrix, d2);
+
+    Matrix3D cube1 = cube1_future.get(); // blocking calls 
+    Matrix3D cube2 = cube2_future.get();
+    subtract3D(&cube1, &cube2);
+    return cube1;
+}
+
 // Child class - inherits from Field
 class E: public Field{
 public:
@@ -256,33 +290,33 @@ public:
     Matrix4D curl(){
         Matrix4D curl_E = Matrix4D(shape.z,Matrix3D(shape.y,Matrix2D(shape.x,Vector1D(shape.f))));
 
-        std::vector<Matrix3D> cubes = {};
-        for(auto limits: delimiters){
-            Matrix3D cube = cut_out_cube(data, limits);
-            cubes.push_back(cube);
-        }
+        std::future<Matrix3D> term1_future = std::async(build_term, data, delimiters.at(0) ,delimiters.at(1));
+        std::future<Matrix3D> term2_future = std::async(build_term, data, delimiters.at(2) ,delimiters.at(3));
+        std::future<Matrix3D> term3_future = std::async(build_term, data, delimiters.at(4) ,delimiters.at(5));
+        std::future<Matrix3D> term4_future = std::async(build_term, data, delimiters.at(6) ,delimiters.at(7));
+        std::future<Matrix3D> term5_future = std::async(build_term, data, delimiters.at(8) ,delimiters.at(9));
+        std::future<Matrix3D> term6_future = std::async(build_term, data, delimiters.at(10) ,delimiters.at(11));
+
         // couche 0
-        subtract3D(&cubes.at(0), &cubes.at(1));
-        printCube(cubes.at(0));
-        add_to_4dMatrix(&curl_E, cubes.at(0), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y-1), Delimiter(0, shape.z), 0));
-        print4D(curl_E);
+        Matrix3D term1 = term1_future.get();
+        add_to_4dMatrix(&curl_E, term1, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y-1), Delimiter(0, shape.z), 0));
         
-        subtract3D(&cubes.at(2), &cubes.at(3));
-        subtract_from_4dMatrix(&curl_E, cubes.at(2), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z-1), 0));
+        Matrix3D term2 = term2_future.get();
+        subtract_from_4dMatrix(&curl_E, term2, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z-1), 0));
         
         // couche 1
-        subtract3D(&cubes.at(4), &cubes.at(5));
-        add_to_4dMatrix(&curl_E, cubes.at(4), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z-1), 1));
+        Matrix3D term3 = term3_future.get();
+        add_to_4dMatrix(&curl_E, term3, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z-1), 1));
         
-        subtract3D(&cubes.at(6), &cubes.at(7));
-        subtract_from_4dMatrix(&curl_E, cubes.at(6), shape, Delimiter4D(Delimiter(0, shape.x-1), Delimiter(0, shape.y), Delimiter(0, shape.z), 1));
+        Matrix3D term4 = term4_future.get();
+        subtract_from_4dMatrix(&curl_E, term4, shape, Delimiter4D(Delimiter(0, shape.x-1), Delimiter(0, shape.y), Delimiter(0, shape.z), 1));
         
         // couche 2
-        subtract3D(&cubes.at(8), &cubes.at(9));
-        add_to_4dMatrix(&curl_E, cubes.at(8), shape, Delimiter4D(Delimiter(0, shape.x-1), Delimiter(0, shape.y), Delimiter(0, shape.z), 2));
+        Matrix3D term5 = term5_future.get();
+        add_to_4dMatrix(&curl_E, term5, shape, Delimiter4D(Delimiter(0, shape.x-1), Delimiter(0, shape.y), Delimiter(0, shape.z), 2));
         
-        subtract3D(&cubes.at(10), &cubes.at(11));
-        subtract_from_4dMatrix(&curl_E, cubes.at(10), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y-1), Delimiter(0, shape.z), 2));
+        Matrix3D term6 = term6_future.get();
+        subtract_from_4dMatrix(&curl_E, term6, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y-1), Delimiter(0, shape.z), 2));
         return curl_E;
     }
 };
@@ -314,33 +348,34 @@ public:
     Matrix4D curl(){
         Matrix4D curl_H = Matrix4D(shape.z,Matrix3D(shape.y,Matrix2D(shape.x,Vector1D(shape.f))));
 
-        std::vector<Matrix3D> cubes = {};
-        for(auto limits: delimiters){
-            Matrix3D cube = cut_out_cube(data, limits);
-            cubes.push_back(cube);
-        }
+        std::future<Matrix3D> term1_future = std::async(build_term, data, delimiters.at(0) ,delimiters.at(1));
+        std::future<Matrix3D> term2_future = std::async(build_term, data, delimiters.at(2) ,delimiters.at(3));
+        std::future<Matrix3D> term3_future = std::async(build_term, data, delimiters.at(4) ,delimiters.at(5));
+        std::future<Matrix3D> term4_future = std::async(build_term, data, delimiters.at(6) ,delimiters.at(7));
+        std::future<Matrix3D> term5_future = std::async(build_term, data, delimiters.at(8) ,delimiters.at(9));
+        std::future<Matrix3D> term6_future = std::async(build_term, data, delimiters.at(10) ,delimiters.at(11));
 
         // couche 0
-        subtract3D(&cubes.at(0), &cubes.at(1));
-        add_to_4dMatrix(&curl_H, cubes.at(0), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(1, shape.y), Delimiter(0, shape.z), 0));
+        Matrix3D term1 = term1_future.get();
+        add_to_4dMatrix(&curl_H, term1, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(1, shape.y), Delimiter(0, shape.z), 0));
         
-        subtract3D(&cubes.at(2), &cubes.at(3));
-        subtract_from_4dMatrix(&curl_H, cubes.at(2), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(1, shape.z), 0));
-
+        Matrix3D term2 = term2_future.get();
+        subtract_from_4dMatrix(&curl_H, term2, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(1, shape.z), 0));
+        
         // couche 1
-        subtract3D(&cubes.at(4), &cubes.at(5));
-        add_to_4dMatrix(&curl_H, cubes.at(4), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(1, shape.z), 1));
+        Matrix3D term3 = term3_future.get();
+        add_to_4dMatrix(&curl_H, term3, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(0, shape.y), Delimiter(1, shape.z), 1));
         
-        subtract3D(&cubes.at(6), &cubes.at(7));
-        subtract_from_4dMatrix(&curl_H, cubes.at(6), shape, Delimiter4D(Delimiter(1, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z), 1));
+        Matrix3D term4 = term4_future.get();
+        subtract_from_4dMatrix(&curl_H, term4, shape, Delimiter4D(Delimiter(1, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z), 1));
         
         // couche 2
-        subtract3D(&cubes.at(8), &cubes.at(9));
-        add_to_4dMatrix(&curl_H, cubes.at(8), shape, Delimiter4D(Delimiter(1, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z), 2));
+        Matrix3D term5 = term5_future.get();
+        add_to_4dMatrix(&curl_H, term5, shape, Delimiter4D(Delimiter(1, shape.x), Delimiter(0, shape.y), Delimiter(0, shape.z), 2));
         
-        subtract3D(&cubes.at(10), &cubes.at(11));
-        subtract_from_4dMatrix(&curl_H, cubes.at(10), shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(1, shape.y), Delimiter(0, shape.z), 2));
-        print4D(curl_H);
+        Matrix3D term6 = term6_future.get();
+        subtract_from_4dMatrix(&curl_H, term6, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(1, shape.y), Delimiter(0, shape.z), 2));
+        
         return curl_H;
     }
 };
@@ -351,7 +386,7 @@ private:
     Shape shape_;
     E E_;
     H H_;
-    int courant_number_;
+    float courant_number_;
     int n_;
     int index_;
 
@@ -365,7 +400,7 @@ private:
     }
 
 public:
-    WaveEquation(int n, int courant_number){
+    WaveEquation(int n, float courant_number){
         Shape s = {
             n,
             n,
@@ -401,52 +436,59 @@ public:
 
         Position source_pos = this->source_pos();
         float source_val = this->source_val();
-    
-        // std::cout << std::get<0>(source_pos) << " " << std::get<1>(source_pos) << " "<< std::get<2>(source_pos) << " "<< std::get<3>(source_pos) << " "<< std::endl;
-        // std::cout<<source_val<<std::endl;
 
+        auto t1 = std::chrono::high_resolution_clock::now();
         timestep(source_pos, source_val);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
+        std::cout <<"Timestep took: " <<s_int.count() << "s\n";
 
         index_++;
     }
 
     void timestep(Position position, float val){
         // E += courant_number * curl_H(H)
-        std::cout<<"gonna run curl H "<<std::endl;
+        auto t1 = std::chrono::high_resolution_clock::now();
         Matrix4D curl_H = H_.curl();
-        // print4D(curl_H);
-        std::cout<<"curl H ok"<<std::endl;
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
+        std::cout <<"CurlH took: " <<s_int.count() << "s\n";
+
         multiply(&curl_H, courant_number_);
-        std::cout<<"multiply curl H ok"<<std::endl;
         add(&E_.data, curl_H);
-        std::cout<<"add curl H to E ok"<<std::endl;
+
 
         // E[source_pos] += source_val
         int x=std::get<0>(position);
         int y=std::get<1>(position);
         int z=std::get<2>(position);
         int couche=std::get<3>(position);
-        E_.data.at(couche).at(x).at(y).at(z) += val;
+        E_.data.at(x).at(y).at(z).at(couche) += val;
 
         // H -= courant_number * curl_E(E)
+        t1 = std::chrono::high_resolution_clock::now();
         Matrix4D curl_E = E_.curl();
+        t2 = std::chrono::high_resolution_clock::now();
+        s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
+        std::cout <<"CurlE took: " << s_int.count() << "s\n";
         multiply(&curl_E, courant_number_);
         subtract(&H_.data, curl_E);
     }
 
-    void print_E(){
-        print4D(E_.data);
+    E get_E(){
+        return E_;
     }
 
-    void print_H(){
-        print4D(H_.data);
+    H get_H(){
+        return H_;
     }
 
 };
 
 // int main(int argc, char** argv)
 // {
-//     int n = 100;
+//     int n = 2;
+//     // int n = 100;
 //     float courant_number = 0.1;
     
 //     // unused
@@ -455,11 +497,28 @@ public:
 
 //     WaveEquation w = WaveEquation(n, courant_number);
 //     int counter = 0;
-//     while(counter<100){
-//         w(0, 2, 50);
+//     while(counter<10){
+//         w(0, 1, 1);
+//         print_to_file(w.get_E().data, 0, 1, 1, counter);
 //         counter++;
 //     }
 // }
+
+// test timestep
+int main(int argc, char** argv)
+{
+    int n = 100;
+    float courant_number = 0.1;
+    
+    WaveEquation w = WaveEquation(n, courant_number);
+
+    int counter = 0;
+    while(counter<2){
+        w(0, 1, 50);
+        // print_to_file(w.get_E().data, 0, 1, 50, counter);
+        counter++;
+    }
+}
 
 // test cut_out_cube
 // int main(int argc, char** argv)
@@ -622,43 +681,43 @@ public:
 // }
 
 // Test curl_E
-int main(int argc, char** argv)
-{
-    Shape s = {
-        2,
-        2,
-        2,
-        3,
-    };
+// int main(int argc, char** argv)
+// {
+//     Shape s = {
+//         2,
+//         2,
+//         2,
+//         3,
+//     };
 
-    // my 4D Matrix
-    E e = E(s);
-    e.data[0][0][0][0] = 1.0;
-    e.data[0][1][0][0] = 2.0;
-    e.data[1][0][0][0] = 3.0;
-    e.data[1][1][0][0] = 4.0;
-    e.data[0][0][1][0] = 5.0;
-    e.data[0][1][1][0] = 6.0;
-    e.data[1][0][1][0] = 7.0;
-    e.data[1][1][1][0] = 8.0;
-    e.data[0][0][0][1] = 9.0;
-    e.data[0][1][0][1] = 10.0;
-    e.data[1][0][0][1] = 11.0;
-    e.data[1][1][0][1] = 12.0;
-    e.data[0][0][1][1] = 13.0;
-    e.data[0][1][1][1] = 14.0;
-    e.data[1][0][1][1] = 15.0;
-    e.data[1][1][1][1] = 16.0;
-    e.data[0][0][0][2] = 17.0;
-    e.data[0][1][0][2] = 18.0;
-    e.data[1][0][0][2] = 19.0;
-    e.data[1][1][0][2] = 20.0;
-    e.data[0][0][1][2] = 21.0;
-    e.data[0][1][1][2] = 22.0;
-    e.data[1][0][1][2] = 23.0;
-    e.data[1][1][1][2] = 24.0;
+//     // my 4D Matrix
+//     E e = E(s);
+//     e.data[0][0][0][0] = 1.0;
+//     e.data[0][1][0][0] = 2.0;
+//     e.data[1][0][0][0] = 3.0;
+//     e.data[1][1][0][0] = 4.0;
+//     e.data[0][0][1][0] = 5.0;
+//     e.data[0][1][1][0] = 6.0;
+//     e.data[1][0][1][0] = 7.0;
+//     e.data[1][1][1][0] = 8.0;
+//     e.data[0][0][0][1] = 9.0;
+//     e.data[0][1][0][1] = 10.0;
+//     e.data[1][0][0][1] = 11.0;
+//     e.data[1][1][0][1] = 12.0;
+//     e.data[0][0][1][1] = 13.0;
+//     e.data[0][1][1][1] = 14.0;
+//     e.data[1][0][1][1] = 15.0;
+//     e.data[1][1][1][1] = 16.0;
+//     e.data[0][0][0][2] = 17.0;
+//     e.data[0][1][0][2] = 18.0;
+//     e.data[1][0][0][2] = 19.0;
+//     e.data[1][1][0][2] = 20.0;
+//     e.data[0][0][1][2] = 21.0;
+//     e.data[0][1][1][2] = 22.0;
+//     e.data[1][0][1][2] = 23.0;
+//     e.data[1][1][1][2] = 24.0;
 
-    // print4D(e.data);
-    Matrix4D curl_E = e.curl();
-    print4D(curl_E);
-}
+//     // print4D(e.data);
+//     Matrix4D curl_E = e.curl();
+//     print4D(curl_E);
+// }
