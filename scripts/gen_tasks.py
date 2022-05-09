@@ -16,9 +16,15 @@ if len(sys.argv) >= 4:
 os.chdir(dirname)
 files = glob.glob("*.svg")
 
-for f in files:
+#for f in files:
+for i in range(3):
+    f=files[i]
     basename    = os.path.splitext(f)[0]
     pngname     = basename + ".png"
+    print("%s;%s;%s"%(
+        os.path.join(dirname, f),
+        os.path.join(out_dirname, pngname),
+        width))
     print("%s;%s;%s"%(
         os.path.join(dirname, f),
         os.path.join(out_dirname, pngname),

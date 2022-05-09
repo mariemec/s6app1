@@ -56,8 +56,8 @@ class WaveEquation:
             field = field[:, slice_index, :, field_component]
         elif slice == 2:
             field = field[:, :, slice_index, field_component]
-        source_pos, source_index = source(self.index)
-        self.E, self.H = timestep(self.E, self.H, self.courant_number, source_pos, source_index)
+        source_val, source_pos = source(self.index)
+        self.E, self.H = timestep(self.E, self.H, self.courant_number, source_val, source_pos)
 
         if initial:
             axes = figure.add_subplot(111)
@@ -67,17 +67,46 @@ class WaveEquation:
         self.index += 1
 
 
+# if __name__ == "__main__":
+#     n = 100
+#     r = 0.01
+#     l = 30
+
+
+#     def source(index):
+#         return ([n // 3], [n // 3], [n // 2],[0]), 0.1*numpy.sin(0.1 * index)
+
+
+#     w = WaveEquation((n, n, n), 0.1, source)
+#     fiddle.fiddle(w, [('field component',{'Ex':0,'Ey':1,'Ez':2, 'Hx':3,'Hy':4,'Hz':5}),('slice',{'XY':2,'YZ':0,'XZ':1}),('slice index',0,n-1,n//2,1)], update_interval=0.01)
+
 if __name__ == "__main__":
-    n = 100
-    r = 0.01
-    l = 30
-
-
-    def source(index):
-        return ([n // 3], [n // 3], [n // 2],[0]), 0.1*numpy.sin(0.1 * index)
-
-
-    w = WaveEquation((n, n, n), 0.1, source)
-    fiddle.fiddle(w, [('field component',{'Ex':0,'Ey':1,'Ez':2, 'Hx':3,'Hy':4,'Hz':5}),('slice',{'XY':2,'YZ':0,'XZ':1}),('slice index',0,n-1,n//2,1)], update_interval=0.01)
-
-
+    data = numpy.zeros((2, 2, 2, 3))
+    data[0][0][0][0] = 1.0
+    data[0][1][0][0] = 2.0
+    data[1][0][0][0] = 3.0
+    data[1][1][0][0] = 4.0
+    data[0][0][1][0] = 5.0
+    data[0][1][1][0] = 6.0
+    data[1][0][1][0] = 7.0
+    data[1][1][1][0] = 8.0
+    data[0][0][0][1] = 9.0
+    data[0][1][0][1] = 10.0
+    data[1][0][0][1] = 11.0
+    data[1][1][0][1] = 12.0
+    data[0][0][1][1] = 13.0
+    data[0][1][1][1] = 14.0
+    data[1][0][1][1] = 15.0
+    data[1][1][1][1] = 16.0
+    data[0][0][0][2] = 17.0
+    data[0][1][0][2] = 18.0
+    data[1][0][0][2] = 19.0
+    data[1][1][0][2] = 20.0
+    data[0][0][1][2] = 21.0
+    data[0][1][1][2] = 22.0
+    data[1][0][1][2] = 23.0
+    data[1][1][1][2] = 24.0
+    # print(data)
+    c_E = curl_E(data)
+    
+    print(c_E)
