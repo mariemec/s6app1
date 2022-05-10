@@ -67,14 +67,50 @@ void print_to_file(Matrix4D m, int field_component, int slice, int slice_index, 
     std::ofstream myfile (filename);
     if (myfile.is_open())
     {
+        int i=0;
+        int j=0;
+        int k=0;
+        int l=0;
         for(Matrix3D cube: m){
             for(Matrix2D slice: cube){
                 for(Vector1D row: slice){
                     for(float val: row){
-                        myfile << std::fixed << std::setprecision(5) << val << std::endl;
+                        if (val > 0.00001){
+                            myfile << "(" << i << ", "<< j << ", "<< k << ", "<< l << "): ";
+                            myfile << std::fixed << std::setprecision(5) << val << std::endl;
+                        }
+                        i++;
                     }
+                    i=0;
+                    j++;
+                }
+                i=0;
+                j=0;
+                k++;
+            }
+            i=0;
+            j=0;
+            k=0;
+            l++;   
+        }
+        myfile.close();
+    }
+    else std::cout << "Unable to open file";
+}
+
+void print_plane_to_file(Matrix3D m, int field_component, int slice, int slice_index, int ech){
+    
+    std::string filename =  std::to_string(field_component) + "_" + std::to_string(slice) + "_" +std::to_string(slice_index)+ "_" +std::to_string(ech)+"_cpp.txt";  
+    std::ofstream myfile (filename);
+    if (myfile.is_open())
+    {
+        for(Matrix2D slice: m){
+            for(Vector1D row: slice){
+                for(float val: row){
+                    myfile << std::fixed << std::setprecision(5) << val <<" " ;
                 }
             }
+            myfile<<std::endl;
         }
         myfile.close();
     }
@@ -150,7 +186,6 @@ Matrix3D cut_out_cube(Matrix4D matrix, Delimiter4D delimiters){
         j=0;
         k++; 
     }
-
     return cube;
 }
 
@@ -375,7 +410,7 @@ public:
         
         Matrix3D term6 = term6_future.get();
         subtract_from_4dMatrix(&curl_H, term6, shape, Delimiter4D(Delimiter(0, shape.x), Delimiter(1, shape.y), Delimiter(0, shape.z), 2));
-        
+
         return curl_H;
     }
 };
@@ -418,7 +453,7 @@ public:
     void operator()(int field_component, int slice, int slice_index)
     {   
         Matrix4D field;
-        Matrix3D output_cube;
+        Matrix3D output_cube; // Matrix3D, but delimiters sets a specified index in one axis -> equivalent of depth = 1 (2D)
         if (field_component < 3) {
             field = E_.data;
         }else{
@@ -433,6 +468,7 @@ public:
         }else if (slice == 2){
             output_cube  = cut_out_cube(field, Delimiter4D(Delimiter(0, shape_.x), Delimiter(0, shape_.y), Delimiter(slice_index), field_component));
         }
+        // print_plane_to_file(output_cube, field_component, slice, slice_index, index_);
 
         Position source_pos = this->source_pos();
         float source_val = this->source_val();
@@ -440,20 +476,15 @@ public:
         auto t1 = std::chrono::high_resolution_clock::now();
         timestep(source_pos, source_val);
         auto t2 = std::chrono::high_resolution_clock::now();
-        auto s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
-        std::cout <<"Timestep took: " <<s_int.count() << "s\n";
+        auto s_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+        std::cout <<"Timestep took: " <<s_int.count() << "ms\n";
 
         index_++;
     }
 
     void timestep(Position position, float val){
         // E += courant_number * curl_H(H)
-        auto t1 = std::chrono::high_resolution_clock::now();
         Matrix4D curl_H = H_.curl();
-        auto t2 = std::chrono::high_resolution_clock::now();
-        auto s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
-        std::cout <<"CurlH took: " <<s_int.count() << "s\n";
-
         multiply(&curl_H, courant_number_);
         add(&E_.data, curl_H);
 
@@ -466,11 +497,7 @@ public:
         E_.data.at(x).at(y).at(z).at(couche) += val;
 
         // H -= courant_number * curl_E(E)
-        t1 = std::chrono::high_resolution_clock::now();
         Matrix4D curl_E = E_.curl();
-        t2 = std::chrono::high_resolution_clock::now();
-        s_int = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1);
-        std::cout <<"CurlE took: " << s_int.count() << "s\n";
         multiply(&curl_E, courant_number_);
         subtract(&H_.data, curl_E);
     }
@@ -485,37 +512,32 @@ public:
 
 };
 
-// int main(int argc, char** argv)
-// {
-//     int n = 2;
-//     // int n = 100;
-//     float courant_number = 0.1;
-    
-//     // unused
-//     // int r = 0.01;
-//     // int l = 30;
-
-//     WaveEquation w = WaveEquation(n, courant_number);
-//     int counter = 0;
-//     while(counter<10){
-//         w(0, 1, 1);
-//         print_to_file(w.get_E().data, 0, 1, 1, counter);
-//         counter++;
-//     }
-// }
-
-// test timestep
 int main(int argc, char** argv)
 {
+    int field_component, slice, slice_index; //[field component (0-2)] [slice: XY=2, YZ=0, XZ=1] [slice index (0-100)]
+    if (argc >= 3){
+        field_component = atoi(argv[1]);
+        slice = atoi(argv[2]);
+        slice_index = atoi(argv[3]);
+    }else{
+        field_component = 0;
+        slice = 2;
+        slice_index = 50;
+    }
     int n = 100;
     float courant_number = 0.1;
     
     WaveEquation w = WaveEquation(n, courant_number);
 
     int counter = 0;
-    while(counter<2){
-        w(0, 1, 50);
-        // print_to_file(w.get_E().data, 0, 1, 50, counter);
+    while(counter<10){
+        auto t1 = std::chrono::high_resolution_clock::now();
+        w(field_component, slice, slice_index);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto s_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+        std::cout <<"Operator call took: " <<s_int.count() << "ms\n";
+
+        print_to_file(w.get_H().data, field_component, slice, slice_index, counter);
         counter++;
     }
 }

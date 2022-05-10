@@ -68,14 +68,23 @@ class WaveEquation:
 
 def print_to_file(matrix, field_component, slice, slice_index, ech):
     with open(f"{field_component}_{slice}_{slice_index}_{ech}_python.txt", 'w') as f:
+        i, j, k, l = 0, 0, 0, 0
         for cube in matrix :
             for a in cube:
                 for b in a:
                     for val in b:
-                        print("%.5f" % val, file=f)
-
-
-
+                        if val > 0.00001:
+                            print("(%d, %d, %d, %d): %.5f" % (i, j, k, l, val), file=f)
+                        i += 1
+                    i = 0
+                    j += 1
+                i=0
+                j=0
+                k += 1
+            i=0
+            j=0
+            k=0
+            l+=1
 
 if __name__ == "__main__":
     n = 100
@@ -91,8 +100,8 @@ if __name__ == "__main__":
     w = WaveEquation((n, n, n), 0.1, source)
 
     for i in range(10):
-        w(-1, 0, 1, 50, i)
-        print_to_file(w.E, 0, 1, 50, i)
+        w(-1, 0, 2, 50, i)
+        print_to_file(w.H, 0, 2, 50, i)
     # fiddle.fiddle(w, [('field component',{'Ex':0,'Ey':1,'Ez':2, 'Hx':3,'Hy':4,'Hz':5}),('slice',{'XY':2,'YZ':0,'XZ':1}),('slice index',0,n-1,n//2,1)], update_interval=0.01)
 
 # if __name__ == "__main__":
